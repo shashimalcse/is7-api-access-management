@@ -1,72 +1,47 @@
 import express from 'express';
-import { expressjwt, GetVerificationKey, Request as JWTRequest } from "express-jwt";
-import jwksRsa from 'jwks-rsa';
+import { jwtCheck, determineScopeForCourseStatus, checkScope } from './middleware/jwt.js';
+import e from 'express';
 
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 
 const app = express();
 app.use(express.json());
-
-interface Course {
-    id: number;
-    name: string;
-    details: string;
-    pending: boolean;
-    published: boolean
-}
+app.use(jwtCheck);
 
 // Mock database
-const coursesDb: Course[] = [
+const coursesDb = [
     { id: 1, name: 'Course 1', details: 'Details of Course 1', pending: false, published: true },
 ];
 
 // Enrollment mock database
-const enrollments: { [sub: string]: number[] } = {};
-
-
-const jwtCheck = expressjwt({
-    secret: jwksRsa.expressJwtSecret({
-        cache: true,
-        rateLimit: true,
-        jwksRequestsPerMinute: 5,
-        jwksUri: 'https://localhost:9444/oauth2/jwks'
-    }) as GetVerificationKey,
-    audience: 'MPydZFwuXfZfhdqHB_FnHRIjUKYa',
-    issuer: 'https://localhost:9444/oauth2/token',
-    algorithms: ['RS256']
-});
-
-const checkScope = (expectedScope: string) => {
-    return function (req: JWTRequest, res: any, next: (err?: Error) => void) {
-        if (!req.auth || !req.auth.scope || req.auth.scope.split(' ').indexOf(expectedScope) < 0) {
-            return next(new Error('Cannot perform action. Missing scope ' + expectedScope));
-        }
-        next();
-    };
-}
+const enrollments = {};
 
 /*
  * Courses API
  */
-app.use('/api', jwtCheck, function (req: JWTRequest, res, next) {
-    if (req.auth?.sub) {
-        console.log(req.auth?.scope)
-    }
+app.use('/api', jwtCheck, async (req, res, next) => {
     next();
 });
 
 /* 
  * Get all courses
  */
-app.get('/api/courses', checkScope("courses:read-all"), async (req, res) => {
-    const activeCourses = coursesDb.filter(course => course.published === true);
-    res.json(activeCourses);
+app.get('/api/courses', determineScopeForCourseStatus, checkScope, async (req, res) => {
+    var courses;
+    if (req.query.status === 'pending') {
+        courses = coursesDb.filter(course => course.pending === true);
+    } else if (req.query.status === 'approved') {
+        courses = coursesDb.filter(course => course.pending === false);
+    } else {
+        courses = coursesDb.filter(course => course.published === true);
+    }
+    res.json(courses);
 });
 
 /*
  * Get a specific course
  */
-app.get('/api/courses/:courseId', checkScope("courses:read"), async (req, res) => {
+app.get('/api/courses/:courseId', determineScopeForCourseStatus, checkScope, async (req, res) => {
     const courseId = parseInt(req.params.courseId);
     const course = coursesDb.find(c => c.id === courseId);
     if (course && course.published === true) {
@@ -79,8 +54,8 @@ app.get('/api/courses/:courseId', checkScope("courses:read"), async (req, res) =
 /*
  * Create a new course
  */
-app.post('/api/courses', checkScope('courses:create'), async (req, res) => {
-    const newCourse: Course = req.body;
+app.post('/api/courses', determineScopeForCourseStatus, checkScope, async (req, res) => {
+    const newCourse = req.body;
     // Validate input
     if (!newCourse || !newCourse.name || !newCourse.details) {
         return res.status(400).send('Invalid course data');
@@ -98,13 +73,13 @@ app.post('/api/courses', checkScope('courses:create'), async (req, res) => {
 /*
  * Update a course
  */
-app.put('/api/courses/:courseId', checkScope('courses:update'), async (req, res) => {
+app.put('/api/courses/:courseId', determineScopeForCourseStatus, checkScope, async (req, res) => {
     const courseId = parseInt(req.params.courseId);
     const course = coursesDb.find(c => c.id === courseId);
     if (!course ||  course.pending) {
         res.status(404).send('Course not found');
     }
-    const updateCourse: Course = req.body;
+    const updateCourse = req.body;
     // Validate input
     if (!updateCourse) {
         return res.status(400).send('Invalid course data');
@@ -118,12 +93,7 @@ app.put('/api/courses/:courseId', checkScope('courses:update'), async (req, res)
     res.json(course);
 });
 
-app.get('/api/courses/pending', checkScope('courses:read-pending'), async (req, res) => {
-    const activeCourses = coursesDb.filter(course => course.pending === true);
-    res.json(activeCourses);
-});
-
-app.put('/api/courses/:courseId/approve', checkScope('courses:approve'), async (req, res) => {
+app.put('/api/courses/:courseId/approve', determineScopeForCourseStatus, checkScope, async (req, res) => {
     const courseId = parseInt(req.params.courseId);
     const course = coursesDb.find(c => c.id === courseId && c.pending === true);
 
@@ -135,7 +105,7 @@ app.put('/api/courses/:courseId/approve', checkScope('courses:approve'), async (
     res.json(course);
 });
 
-app.put('/api/courses/:courseId/publish', checkScope('courses:publish'), async (req, res) => {
+app.put('/api/courses/:courseId/publish', determineScopeForCourseStatus, checkScope, async (req, res) => {
     const courseId = parseInt(req.params.courseId);
     const course = coursesDb.find(c => c.id === courseId && c.pending === false);
 
@@ -147,7 +117,7 @@ app.put('/api/courses/:courseId/publish', checkScope('courses:publish'), async (
     res.json(course);
 });
 
-app.post('/api/courses/:courseId/enroll', checkScope('courses:enroll'), async (req : JWTRequest, res) => {
+app.post('/api/courses/:courseId/enroll', determineScopeForCourseStatus, checkScope, async (req, res) => {
     const courseId = parseInt(req.params.courseId);
     const course = coursesDb.find(c => c.id === courseId);
 
@@ -178,7 +148,7 @@ app.post('/api/courses/:courseId/enroll', checkScope('courses:enroll'), async (r
     res.json(course);
 });
 
-app.get('/api/enrollments', checkScope('enrollments:read'), async (req: JWTRequest, res) => {
+app.get('/api/courses/enrollments', determineScopeForCourseStatus, checkScope, async (req, res) => {
     // Get the user's sub from the auth object
     const sub = req.auth?.sub;
 
