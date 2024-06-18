@@ -1,23 +1,56 @@
+import e from 'express';
 import { expressjwt } from 'express-jwt';
 import jwksRsa from 'jwks-rsa';
 
 const scopes = {
     'pending': 'courses:read-pending',
     'approved': 'courses:read-approved',
-    'published': 'courses:read-all'
+    'published': 'courses:read-published'
 };
 
-export const determineScopeForCourseStatus = (req, res, next) => {
+export const determineScopes = (req, res, next) => {
 
     var requiredScope
     if (req.path === '/api/courses') {
         if (req.method === 'GET') {
             const status = typeof req.query.status === 'string' ? req.query.status.toLowerCase() : 'published';
-            // Default to 'courses:read-all' if status is not recognized
-            requiredScope = scopes[status] || 'courses:read-all';
+            requiredScope = scopes[status] || 'courses:read-published';
+        }
+        else if (req.method === 'POST') {
+            requiredScope = 'courses:write';
         }
     }
-    // Store the required scope in the request object for later use
+    else if (req.path.match(/\/api\/courses\/\d+/)) {
+        if (req.method === 'GET') {
+            requiredScope = 'courses:read';
+        }
+        else if (req.method === 'PUT') {
+            requiredScope = 'courses:update';
+        }
+        else if (req.method === 'DELETE') {
+            requiredScope = 'courses:delete';
+        }
+        else if (req.method === 'PATCH') {
+            const status = req.body.status;
+            if (status === 'approved') {
+                requiredScope = 'courses:approve';
+            }
+            else if (status === 'published') {
+                requiredScope = 'courses:publish';
+            }
+        }
+    }
+    else if (req.path.match(/\/api\/courses\/\d+\/enrollments/)) {
+        if (req.method === 'POST' || req.method === 'DELETE') {
+            requiredScope = 'courses:enroll';
+        }   
+
+    }
+    else if (req.path === '/api/me/enrollments') {
+        if (req.method === 'GET') {
+            requiredScope = 'courses:read';
+        }
+    }
     req.requiredScope = requiredScope;
     next();
 }

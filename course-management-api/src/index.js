@@ -6,7 +6,6 @@ process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 
 const app = express();
 app.use(express.json());
-app.use(jwtCheck);
 
 // Mock database
 const coursesDb = [
@@ -39,19 +38,6 @@ app.get('/api/courses', determineScopeForCourseStatus, checkScope, async (req, r
 });
 
 /*
- * Get a specific course
- */
-app.get('/api/courses/:courseId', determineScopeForCourseStatus, checkScope, async (req, res) => {
-    const courseId = parseInt(req.params.courseId);
-    const course = coursesDb.find(c => c.id === courseId);
-    if (course && course.published === true) {
-        res.json(course);
-    } else {
-        res.status(404).send('Course not found');
-    }
-});
-
-/*
  * Create a new course
  */
 app.post('/api/courses', determineScopeForCourseStatus, checkScope, async (req, res) => {
@@ -68,6 +54,19 @@ app.post('/api/courses', determineScopeForCourseStatus, checkScope, async (req, 
     coursesDb.push(newCourse);
     // Return the new course
     res.json(newCourse);
+});
+
+/*
+ * Get a specific course
+ */
+app.get('/api/courses/:courseId', determineScopeForCourseStatus, checkScope, async (req, res) => {
+    const courseId = parseInt(req.params.courseId);
+    const course = coursesDb.find(c => c.id === courseId);
+    if (course && course.published === true) {
+        res.json(course);
+    } else {
+        res.status(404).send('Course not found');
+    }
 });
 
 /*
@@ -93,7 +92,7 @@ app.put('/api/courses/:courseId', determineScopeForCourseStatus, checkScope, asy
     res.json(course);
 });
 
-app.put('/api/courses/:courseId/approve', determineScopeForCourseStatus, checkScope, async (req, res) => {
+app.patch('/api/courses/:courseId', determineScopeForCourseStatus, checkScope, async (req, res) => {
     const courseId = parseInt(req.params.courseId);
     const course = coursesDb.find(c => c.id === courseId && c.pending === true);
 
@@ -101,23 +100,21 @@ app.put('/api/courses/:courseId/approve', determineScopeForCourseStatus, checkSc
         return res.status(404).send('Course not found');
     }
 
-    course.pending = false;
-    res.json(course);
-});
+    const status = req.body.status;
 
-app.put('/api/courses/:courseId/publish', determineScopeForCourseStatus, checkScope, async (req, res) => {
-    const courseId = parseInt(req.params.courseId);
-    const course = coursesDb.find(c => c.id === courseId && c.pending === false);
-
-    if (!course) {
-        return res.status(404).send('Course not found');
+    if (status === 'approved' && course.pending === true) {
+        course.pending = false;
     }
-
-    course.published = true;
+    else if (status === 'published' && course.pending === false) {
+        course.published = true;
+    }
+    else {
+        return res.status(400).send('Invalid status');
+    }
     res.json(course);
 });
 
-app.post('/api/courses/:courseId/enroll', determineScopeForCourseStatus, checkScope, async (req, res) => {
+app.post('/api/courses/:courseId/enrollments', determineScopeForCourseStatus, checkScope, async (req, res) => {
     const courseId = parseInt(req.params.courseId);
     const course = coursesDb.find(c => c.id === courseId);
 
@@ -125,30 +122,26 @@ app.post('/api/courses/:courseId/enroll', determineScopeForCourseStatus, checkSc
         return res.status(404).send('Course not found');
     }
 
-    // Get the user's sub from the auth object
     const sub = req.auth?.sub;
 
     if (!sub) {
         return res.status(401).send('Unauthorized');
     }
 
-    // If the user is not in the enrollments dictionary, add them
     if (!enrollments[sub]) {
         enrollments[sub] = [];
     }
 
-    // If the user is already enrolled in the course, return an error
     if (enrollments[sub].includes(courseId)) {
         return res.status(400).send('Already enrolled in this course');
     }
 
-    // Enroll the user in the course
     enrollments[sub].push(courseId);
 
     res.json(course);
 });
 
-app.get('/api/courses/enrollments', determineScopeForCourseStatus, checkScope, async (req, res) => {
+app.get('/api/me/enrollments', determineScopeForCourseStatus, checkScope, async (req, res) => {
     // Get the user's sub from the auth object
     const sub = req.auth?.sub;
 
