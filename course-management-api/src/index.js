@@ -8,9 +8,7 @@ const app = express();
 app.use(express.json());
 
 // Mock database
-const coursesDb = [
-    { id: 1, name: 'Course 1', details: 'Details of Course 1', pending: false, published: true },
-];
+const coursesDb = [];
 
 // Enrollment mock database
 const enrollments = {};
@@ -32,8 +30,16 @@ app.get('/api/courses', determineScopes, checkScope, async (req, res) => {
     } else if (req.query.status === 'approved') {
         courses = coursesDb.filter(course => course.pending === false && course.published === false);
     } else {
-        courses = coursesDb.filter(course => course.published === true || course.pending === false);
+        courses = coursesDb.filter(course => course.published === true && course.pending === false);
     }
+    // courses = courses.map(course => {
+    //     return {
+    //         id: course.id,
+    //         name: course.name,
+    //         details: course.details,
+    //         started_date: course.started_date
+    //     };
+    // });
     res.json(courses);
 });
 
@@ -53,7 +59,12 @@ app.post('/api/courses', determineScopes, checkScope, async (req, res) => {
     // Add the new course to the database
     coursesDb.push(newCourse);
     // Return the new course
-    res.json(newCourse);
+    res.json({
+        id: newCourse.id,
+        name: newCourse.name,
+        details: newCourse.details,
+        started_date: newCourse.started_date
+    });
 });
 
 /*
@@ -63,7 +74,12 @@ app.get('/api/courses/:courseId', determineScopes, checkScope, async (req, res) 
     const courseId = parseInt(req.params.courseId);
     const course = coursesDb.find(c => c.id === courseId);
     if (course && course.published === true) {
-        res.json(course);
+        res.json({
+            id: course.id,
+            name: course.name,
+            details: course.details,
+            started_date: course.started_date
+        });
     } else {
         res.status(404).send('Course not found');
     }
@@ -89,12 +105,20 @@ app.put('/api/courses/:courseId', determineScopes, checkScope, async (req, res) 
     if (updateCourse.details && course) {
         course.details = updateCourse.details;
     }
-    res.json(course);
+    res.json({
+        id: course.id,
+        name: course.name,
+        details: course.details,
+        started_date: course.started_date
+    });
 });
 
+/*
+ * Update a course status
+ */
 app.patch('/api/courses/:courseId', determineScopes, checkScope, async (req, res) => {
     const courseId = parseInt(req.params.courseId);
-    const course = coursesDb.find(c => c.id === courseId && c.pending === true);
+    const course = coursesDb.find(c => c.id === courseId);
 
     if (!course) {
         return res.status(404).send('Course not found');
@@ -111,9 +135,33 @@ app.patch('/api/courses/:courseId', determineScopes, checkScope, async (req, res
     else {
         return res.status(400).send('Invalid status');
     }
-    res.json(course);
+    res.json({
+        id: course.id,
+        name: course.name,
+        details: course.details,
+        started_date: course.started_date
+    });
 });
 
+/*
+ * Delete a course
+ */
+app.delete('/api/courses/:courseId', determineScopes, checkScope, async (req, res) => {
+    const courseId = parseInt(req.params.courseId);
+    const course = coursesDb.find(c => c.id === courseId && c.pending === true);
+
+    if (!course) {
+        return res.status(404).send('Course not found');
+    }
+
+    // delete course
+    coursesDb = coursesDb.filter(c => c.id !== courseId);
+    res.sendStatus(204);
+});
+
+/*
+ * Enroll/Unenroll course
+ */
 app.post('/api/courses/:courseId/enrollments', determineScopes, checkScope, async (req, res) => {
     const courseId = parseInt(req.params.courseId);
     const course = coursesDb.find(c => c.id === courseId);
@@ -138,9 +186,12 @@ app.post('/api/courses/:courseId/enrollments', determineScopes, checkScope, asyn
 
     enrollments[sub].push(courseId);
 
-    res.json(course);
+    res.json();
 });
 
+/*
+ * Get my enrolled course
+ */
 app.get('/api/me/enrollments', determineScopes, checkScope, async (req, res) => {
     // Get the user's sub from the auth object
     const sub = req.auth?.sub;
@@ -158,7 +209,14 @@ app.get('/api/me/enrollments', determineScopes, checkScope, async (req, res) => 
 
     // Get the course objects for the user's enrollments
     const enrolledCourses = userEnrollments.map(courseId => coursesDb.find(c => c.id === courseId));
-
+    enrolledCourses = enrolledCourses.map(course => {
+        return {
+            id: course.id,
+            name: course.name,
+            details: course.details,
+            started_date: course.started_date
+        };
+    });
     res.json(enrolledCourses);
 });
 

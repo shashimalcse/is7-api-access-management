@@ -30,17 +30,34 @@ if [ -n "$approvedCourses" ] && [ "$approvedCourses" != "null" ]; then
     }
     courseId=$(_jq '.id')
     courseName=$(_jq '.name')
-    echo "Publishing course: $courseName"
-    # Publish the course
-    publishCourseUrl="http://localhost:3000/api/courses/$courseId"
-publishResponse=$(curl -k -s -X PATCH $publishCourseUrl \
-        -H "Authorization:Bearer ${accessToken}" \
-        -d '{"status":"published"}')
-    # Check if the course was published successfully
-    if [ -n "$publishResponse" ] && [ "$publishResponse" != "null" ]; then
-      echo "Course published successfully"
+    startDate=$(_jq '.started_date')
+
+    # Convert the start date to seconds
+    startSeconds=$(date -j -f "%Y-%m-%d" "${startDate}" "+%s")
+
+    # Get the current date in seconds
+    currentSeconds=$(date "+%s")
+
+    # Calculate the difference in weeks
+    diffWeeks=$(( ($startSeconds - $currentSeconds) / 604800 ))
+    echo $diffWeeks
+    if [ $diffWeeks -lt 1 ]; then
+      echo "Publishing course: $courseName"
+      # Publish the course
+      publishCourseUrl="http://localhost:3000/api/courses/$courseId"
+      publishResponse=$(curl -k -s -X PATCH $publishCourseUrl \
+          -H "Authorization:Bearer ${accessToken}" \
+          -H "Content-Type:application/json" \
+          -d '{"status":"published"}')
+      echo $publishResponse    
+      # Check if the course was published successfully
+      if [ -n "$publishResponse" ] && [ "$publishResponse" != "null" ]; then
+        echo "Course published successfully"
+      else
+        echo "Failed to publish course"
+      fi
     else
-      echo "Failed to publish course"
+      echo "Course start date is more than a week ago. Not publishing."
     fi
   done
 else
