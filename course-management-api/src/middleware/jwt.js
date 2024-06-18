@@ -69,7 +69,8 @@ export const jwtCheck = expressjwt({
 
 export const checkScope = (req, res, next) => {
     if (!req.auth || !req.auth.scope || req.auth.scope.split(' ').indexOf(req.requiredScope) < 0) {
-        return next(new Error('Cannot perform action. Missing scope ' + req.requiredScope));
+        res.status(401).send('Cannot perform action. Missing scope ' + req.requiredScope);
+        return;
     }
     next();
 }

@@ -1,5 +1,5 @@
 import express from 'express';
-import { jwtCheck, determineScopeForCourseStatus, checkScope } from './middleware/jwt.js';
+import { jwtCheck, determineScopes, checkScope } from './middleware/jwt.js';
 import e from 'express';
 
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
@@ -25,14 +25,14 @@ app.use('/api', jwtCheck, async (req, res, next) => {
 /* 
  * Get all courses
  */
-app.get('/api/courses', determineScopeForCourseStatus, checkScope, async (req, res) => {
+app.get('/api/courses', determineScopes, checkScope, async (req, res) => {
     var courses;
     if (req.query.status === 'pending') {
-        courses = coursesDb.filter(course => course.pending === true);
+        courses = coursesDb.filter(course => course.pending === true && course.published === false);
     } else if (req.query.status === 'approved') {
-        courses = coursesDb.filter(course => course.pending === false);
+        courses = coursesDb.filter(course => course.pending === false && course.published === false);
     } else {
-        courses = coursesDb.filter(course => course.published === true);
+        courses = coursesDb.filter(course => course.published === true || course.pending === false);
     }
     res.json(courses);
 });
@@ -40,7 +40,7 @@ app.get('/api/courses', determineScopeForCourseStatus, checkScope, async (req, r
 /*
  * Create a new course
  */
-app.post('/api/courses', determineScopeForCourseStatus, checkScope, async (req, res) => {
+app.post('/api/courses', determineScopes, checkScope, async (req, res) => {
     const newCourse = req.body;
     // Validate input
     if (!newCourse || !newCourse.name || !newCourse.details) {
@@ -59,7 +59,7 @@ app.post('/api/courses', determineScopeForCourseStatus, checkScope, async (req, 
 /*
  * Get a specific course
  */
-app.get('/api/courses/:courseId', determineScopeForCourseStatus, checkScope, async (req, res) => {
+app.get('/api/courses/:courseId', determineScopes, checkScope, async (req, res) => {
     const courseId = parseInt(req.params.courseId);
     const course = coursesDb.find(c => c.id === courseId);
     if (course && course.published === true) {
@@ -72,7 +72,7 @@ app.get('/api/courses/:courseId', determineScopeForCourseStatus, checkScope, asy
 /*
  * Update a course
  */
-app.put('/api/courses/:courseId', determineScopeForCourseStatus, checkScope, async (req, res) => {
+app.put('/api/courses/:courseId', determineScopes, checkScope, async (req, res) => {
     const courseId = parseInt(req.params.courseId);
     const course = coursesDb.find(c => c.id === courseId);
     if (!course ||  course.pending) {
@@ -92,7 +92,7 @@ app.put('/api/courses/:courseId', determineScopeForCourseStatus, checkScope, asy
     res.json(course);
 });
 
-app.patch('/api/courses/:courseId', determineScopeForCourseStatus, checkScope, async (req, res) => {
+app.patch('/api/courses/:courseId', determineScopes, checkScope, async (req, res) => {
     const courseId = parseInt(req.params.courseId);
     const course = coursesDb.find(c => c.id === courseId && c.pending === true);
 
@@ -114,7 +114,7 @@ app.patch('/api/courses/:courseId', determineScopeForCourseStatus, checkScope, a
     res.json(course);
 });
 
-app.post('/api/courses/:courseId/enrollments', determineScopeForCourseStatus, checkScope, async (req, res) => {
+app.post('/api/courses/:courseId/enrollments', determineScopes, checkScope, async (req, res) => {
     const courseId = parseInt(req.params.courseId);
     const course = coursesDb.find(c => c.id === courseId);
 
@@ -141,7 +141,7 @@ app.post('/api/courses/:courseId/enrollments', determineScopeForCourseStatus, ch
     res.json(course);
 });
 
-app.get('/api/me/enrollments', determineScopeForCourseStatus, checkScope, async (req, res) => {
+app.get('/api/me/enrollments', determineScopes, checkScope, async (req, res) => {
     // Get the user's sub from the auth object
     const sub = req.auth?.sub;
 
