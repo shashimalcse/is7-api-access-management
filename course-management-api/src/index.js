@@ -49,7 +49,7 @@ app.get('/api/courses', determineScopes, checkScope, async (req, res) => {
 app.post('/api/courses', determineScopes, checkScope, async (req, res) => {
     const newCourse = req.body;
     // Validate input
-    if (!newCourse || !newCourse.name || !newCourse.details) {
+    if (!newCourse || !newCourse.name || !newCourse.details || !newCourse.started_date) {
         return res.status(400).send('Invalid course data');
     }
     // Assign an id to the new course
