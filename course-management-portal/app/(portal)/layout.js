@@ -1,27 +1,23 @@
-'use client';
-
-import "../../globals.css";
+import "../globals.css";
 import { Inter } from "next/font/google";
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
-import { SessionProvider } from "next-auth/react"
+import Provider from '../(provider)/session-provider';
 
 const inter = Inter({ subsets: ["latin"] });
 
-export default async function RootLayout({ children }) {
+export default async function asyncRootLayout({ children }) {
 
   const session = await getServerSession();
-  console.log(session)
-  if (session && session.accessToken) {
-    console.log("redirecting to /")
-    redirect("/")
+  if (session ===  null) {
+    redirect("/signin")
   }
 
   return (
     <html lang="en">
-      <SessionProvider session={session}>
+      <Provider session={session}>
       <body className={inter.className}>{children}</body>
-      </SessionProvider>
+      </Provider>
     </html>
   );
 }
