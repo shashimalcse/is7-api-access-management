@@ -1,45 +1,58 @@
-import NextAuth from "next-auth"
+import NextAuth from "next-auth";
 
-const handler = NextAuth({
+export const authOptions = {
     secret: process.env.NEXTAUTH_SECRET,
 
     providers: [
         {
             authorization: {
                 params: {
-                    scope: "openid email profile"
-                }
+                    scope: "openid email profile roles",
+                },
             },
             clientId: process.env.CLIENT_ID,
-            clientSecret: process.env.CLIENT_SECRET,
-            id: "IS7",
-            name: "IS7",
+            client: {
+                token_endpoint_auth_method: "none",
+            },
             profile(profile) {
-
                 return {
-                    id: profile.sub
+                    id: profile.sub,
                 };
             },
+            id: "IS7",
+            name: "IS7",
             type: "oauth",
             userinfo: `${process.env.NEXT_PUBLIC_IS7_BASE_URL}/oauth2/userinfo`,
             wellKnown: `${process.env.NEXT_PUBLIC_IS7_BASE_URL}/oauth2/token/.well-known/openid-configuration`,
             issuer: `${process.env.NEXT_PUBLIC_IS7_BASE_URL}/oauth2/token`,
-            callbackUrl: process.env.NEXT_PUBLIC_HOSTED_URL
-        }
+        },
     ],
     callbacks: {
-        async jwt(token, account, profile) {
-            console.log(account, profile);
-            if (account?.accessToken) {
-                token.accessToken = account.access_token;
+        async jwt({ token, user, account, profile, isNewUser }) {
+            if (profile) {
+                user.name = profile.username
+                user.email = profile.email
+                user.firstName = profile.given_name
+                user.lastName = profile.family_name
+                user.roles = profile.roles
+            }
+            if (account) {
+                token.id_token = account.id_token;
+                token.access_token = account.access_token;
+            }
+            if (user) {
+                token.user = user;
             }
             return token;
         },
-        async session(session, user) {
-            session.accessToken = user.accessToken;
+        async session({ session, token, user }) {
+            session.user = token.user;
+            session = Object.assign({}, session, { accessToken: token.access_token, idToken: token.id_token })
             return session;
-        }
-    }
-})
+        },
+    },
+}
 
-export { handler as GET, handler as POST }
+const handler = NextAuth(authOptions);
+
+export { handler as GET, handler as POST };

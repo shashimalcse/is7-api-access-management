@@ -11,7 +11,7 @@ export default function SignIn() {
                 </div>
             </div>
             <div className="flex items-center justify-center flex-1 bg-black">
-                <button className="outline" type="button" onClick={() => {signIn('IS7'); console.log("here");}}>
+                <button className="outline" type="button" onClick={() => signIn('IS7')}>
                     Sign in with IS7
                 </button>
             </div>

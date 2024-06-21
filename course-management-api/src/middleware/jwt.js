@@ -32,14 +32,12 @@ export const determineScopes = (req, res, next) => {
         }
         else if (req.method === 'PATCH') {
             const status = req.body.status;
-            console.log(status)
             if (status === 'approved') {
                 requiredScope = 'courses:approve';
             }
             else if (status === 'published') {
                 requiredScope = 'courses:publish';
             }
-            console.log(requiredScope)
         }
     }
     else if (req.path.match(/\/api\/courses\/\d+\/enrollments/)) {
