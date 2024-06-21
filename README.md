@@ -21,7 +21,7 @@ npm start
 <img width="1512" alt="Screenshot 2024-06-22 at 02 51 22" src="https://github.com/shashimalcse/is7-api-access-management/assets/43197743/cb8fb72d-44f9-4ca4-b39e-46ee92e067a4">
 
 This is a simple Next.js application that is used to manage courses from a course management portal.
-To start the Portal, first create a .env.local file and add following env values :
+To start the Portal (make sure to start the course managent api before this), first create a .env.local file inside course-management-portal and add following env values :
 ```
 NEXT_PUBLIC_HOSTED_URL="http://localhost:3001"
 NEXTAUTH_URL="http://localhost:3001"
