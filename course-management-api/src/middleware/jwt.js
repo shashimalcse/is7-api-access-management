@@ -1,4 +1,3 @@
-import e from 'express';
 import { expressjwt } from 'express-jwt';
 import jwksRsa from 'jwks-rsa';
 
@@ -57,7 +56,7 @@ export const determineScopes = (req, res, next) => {
 
 export const jwtCheck = expressjwt({
     secret: jwksRsa.expressJwtSecret({
-        cache: false,
+        cache: true,
         rateLimit: true,
         jwksRequestsPerMinute: 5,
         jwksUri: 'https://localhost:9443/oauth2/jwks'

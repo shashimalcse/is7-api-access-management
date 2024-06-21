@@ -1,17 +1,45 @@
 import express from 'express';
-const cors = require('cors');
+import cors from 'cors';
+import fs from 'fs';
 import { jwtCheck, determineScopes, checkScope } from './middleware/jwt.js';
 
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 
 const app = express();
 app.use(express.json());
+app.use(cors());
 
-// Mock database
-const coursesDb = [];
+const ensureFileExists = (filePath, defaultContent) => {
+    if (!fs.existsSync(filePath)) {
+        fs.writeFileSync(filePath, JSON.stringify(defaultContent, null, 2));
+    }
+};
 
-// Enrollment mock database
-const enrollments = {};
+// Ensure courses.json and enrollments.json exist
+ensureFileExists('courses.json', []);
+ensureFileExists('enrollments.json', {});
+
+// Read courses from JSON file
+const readCoursesFromFile = () => {
+    const data = fs.readFileSync('courses.json', 'utf8');
+    return JSON.parse(data);
+};
+
+// Write courses to JSON file
+const writeCoursesToFile = (courses) => {
+    fs.writeFileSync('courses.json', JSON.stringify(courses, null, 2));
+};
+
+// Read enrollments from JSON file
+const readEnrollmentsFromFile = () => {
+    const data = fs.readFileSync('enrollments.json', 'utf8');
+    return JSON.parse(data);
+};
+
+// Write enrollments to JSON file
+const writeEnrollmentsToFile = (enrollments) => {
+    fs.writeFileSync('enrollments.json', JSON.stringify(enrollments, null, 2));
+};
 
 /*
  * Courses API
@@ -24,6 +52,7 @@ app.use('/api', jwtCheck, async (req, res, next) => {
  * Get all courses
  */
 app.get('/api/courses', determineScopes, checkScope, async (req, res) => {
+    const coursesDb = readCoursesFromFile();
     var courses;
     if (req.query.status === 'pending') {
         courses = coursesDb.filter(course => course.pending === true && course.published === false);
@@ -40,7 +69,6 @@ app.get('/api/courses', determineScopes, checkScope, async (req, res) => {
             started_date: course.started_date
         };
     });
-    console.log(courses);
     res.json(courses);
 });
 
@@ -48,6 +76,7 @@ app.get('/api/courses', determineScopes, checkScope, async (req, res) => {
  * Create a new course
  */
 app.post('/api/courses', determineScopes, checkScope, async (req, res) => {
+    const coursesDb = readCoursesFromFile();
     const newCourse = req.body;
     // Validate input
     if (!newCourse || !newCourse.name || !newCourse.details || !newCourse.started_date) {
@@ -59,6 +88,7 @@ app.post('/api/courses', determineScopes, checkScope, async (req, res) => {
     newCourse.published = false;
     // Add the new course to the database
     coursesDb.push(newCourse);
+    writeCoursesToFile(coursesDb);
     // Return the new course
     res.json({
         id: newCourse.id,
@@ -72,6 +102,7 @@ app.post('/api/courses', determineScopes, checkScope, async (req, res) => {
  * Get a specific course
  */
 app.get('/api/courses/:courseId', determineScopes, checkScope, async (req, res) => {
+    const coursesDb = readCoursesFromFile();
     const courseId = parseInt(req.params.courseId);
     const course = coursesDb.find(c => c.id === courseId);
     if (course && course.published === true) {
@@ -90,6 +121,7 @@ app.get('/api/courses/:courseId', determineScopes, checkScope, async (req, res) 
  * Update a course
  */
 app.put('/api/courses/:courseId', determineScopes, checkScope, async (req, res) => {
+    const coursesDb = readCoursesFromFile();
     const courseId = parseInt(req.params.courseId);
     const course = coursesDb.find(c => c.id === courseId);
     if (!course || course.pending) {
@@ -106,6 +138,7 @@ app.put('/api/courses/:courseId', determineScopes, checkScope, async (req, res) 
     if (updateCourse.details && course) {
         course.details = updateCourse.details;
     }
+    writeCoursesToFile(coursesDb);
     res.json({
         id: course.id,
         name: course.name,
@@ -118,6 +151,7 @@ app.put('/api/courses/:courseId', determineScopes, checkScope, async (req, res) 
  * Update a course status
  */
 app.patch('/api/courses/:courseId', determineScopes, checkScope, async (req, res) => {
+    const coursesDb = readCoursesFromFile();
     const courseId = parseInt(req.params.courseId);
     const course = coursesDb.find(c => c.id === courseId);
 
@@ -136,6 +170,7 @@ app.patch('/api/courses/:courseId', determineScopes, checkScope, async (req, res
     else {
         return res.status(400).send('Invalid status');
     }
+    writeCoursesToFile(coursesDb);
     res.json({
         id: course.id,
         name: course.name,
@@ -148,15 +183,17 @@ app.patch('/api/courses/:courseId', determineScopes, checkScope, async (req, res
  * Delete a course
  */
 app.delete('/api/courses/:courseId', determineScopes, checkScope, async (req, res) => {
+    const coursesDb = readCoursesFromFile();
     const courseId = parseInt(req.params.courseId);
-    const course = coursesDb.find(c => c.id === courseId && c.pending === true);
+    const course = coursesDb.find(c => c.id === courseId);
 
     if (!course) {
         return res.status(404).send('Course not found');
     }
 
     // delete course
-    coursesDb = coursesDb.filter(c => c.id !== courseId);
+    const updatedCoursesDb = coursesDb.filter(c => c.id !== courseId);
+    writeCoursesToFile(updatedCoursesDb);
     res.sendStatus(204);
 });
 
@@ -164,6 +201,8 @@ app.delete('/api/courses/:courseId', determineScopes, checkScope, async (req, re
  * Enroll/Unenroll course
  */
 app.post('/api/courses/:courseId/enrollments', determineScopes, checkScope, async (req, res) => {
+    const enrollments = readEnrollmentsFromFile();
+    const coursesDb = readCoursesFromFile();
     const courseId = parseInt(req.params.courseId);
     const course = coursesDb.find(c => c.id === courseId);
 
@@ -186,6 +225,7 @@ app.post('/api/courses/:courseId/enrollments', determineScopes, checkScope, asyn
     }
 
     enrollments[sub].push(courseId);
+    writeEnrollmentsToFile(enrollments);
 
     res.json();
 });
@@ -194,6 +234,8 @@ app.post('/api/courses/:courseId/enrollments', determineScopes, checkScope, asyn
  * Get my enrolled course
  */
 app.get('/api/me/enrollments', determineScopes, checkScope, async (req, res) => {
+    const enrollments = readEnrollmentsFromFile();
+    const coursesDb = readCoursesFromFile();
     // Get the user's sub from the auth object
     const sub = req.auth?.sub;
 

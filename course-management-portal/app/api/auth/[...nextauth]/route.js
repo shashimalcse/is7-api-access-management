@@ -7,7 +7,7 @@ export const authOptions = {
         {
             authorization: {
                 params: {
-                    scope: "openid email profile roles",
+                    scope: "openid email profile roles courses:read-approved courses:write courses:delete courses:read-published courses:enroll courses:read courses:publish courses:read-pending courses:approve courses:update",
                 },
             },
             clientId: process.env.CLIENT_ID,
