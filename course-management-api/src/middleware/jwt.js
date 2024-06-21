@@ -19,6 +19,11 @@ export const determineScopes = (req, res, next) => {
             requiredScope = 'courses:write';
         }
     }
+    else if (req.path.match(/\/api\/courses\/\d+\/enrollments/)) {
+        if (req.method === 'POST') {
+            requiredScope = 'courses:enroll';
+        }   
+    }
     else if (req.path.match(/\/api\/courses\/\d+/)) {
         if (req.method === 'GET') {
             requiredScope = 'courses:read';
@@ -38,12 +43,6 @@ export const determineScopes = (req, res, next) => {
                 requiredScope = 'courses:publish';
             }
         }
-    }
-    else if (req.path.match(/\/api\/courses\/\d+\/enrollments/)) {
-        if (req.method === 'POST' || req.method === 'DELETE') {
-            requiredScope = 'courses:enroll';
-        }   
-
     }
     else if (req.path === '/api/me/enrollments') {
         if (req.method === 'GET') {

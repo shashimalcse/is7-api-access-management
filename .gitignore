@@ -1,2 +1,4 @@
 .vscode
 .DS_Store
+course-management-api/courses.json
+course-management-api/enrollements.json
