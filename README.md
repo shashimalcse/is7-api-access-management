@@ -18,15 +18,25 @@ npm start
 
 ## Course Management Portal:
 <img width="1512" alt="Screenshot 2024-06-22 at 02 45 08" src="https://github.com/shashimalcse/is7-api-access-management/assets/43197743/3547b927-2db1-4e84-ad3d-ca6ffa9aebbd">
-<img width="1512" alt="Screenshot 2024-06-22 at 02 49 05" src="https://github.com/shashimalcse/is7-api-access-management/assets/43197743/5457a1ad-b8c3-4037-8f85-b42b82190eda">
+<img width="1512" alt="Screenshot 2024-06-22 at 02 51 22" src="https://github.com/shashimalcse/is7-api-access-management/assets/43197743/cb8fb72d-44f9-4ca4-b39e-46ee92e067a4">
 
 This is a simple Next.js application that is used to manage courses from a course management portal.
-To start the Portal, run the following commands:
+To start the Portal, first create a .env.local file and add following env values :
+```
+NEXT_PUBLIC_HOSTED_URL="http://localhost:3001"
+NEXTAUTH_URL="http://localhost:3001"
+NEXT_PUBLIC_IS7_BASE_URL="https://localhost:9443"
+CLIENT_ID="<client_id>"
+NEXTAUTH_SECRET="<any_secret>"
+NODE_TLS_REJECT_UNAUTHORIZED=0
+```
+Then run following commands:
 ```bash
 cd course-management-portal
 npm install
 npm run dev
 ```
+
 
 ## Scheduled Job for Publishing Courses:
 This is a simple bash script that is used to publish courses (sdheduled job for publishing courses can be created using cron jobs)
