@@ -13,7 +13,6 @@ export default async function asyncRootLayout({ children }) {
   if (session ===  null) {
     redirect("/signin")
   }
-  console.log(session);
   return (
     <html lang="en">
       <Provider session={session}>

@@ -7,7 +7,7 @@ getApprovedCoursesUrl="http://localhost:3000/api/courses?status=approved"
 # Obtain an access token
 response=$(curl -k -s -X POST $tokenEndpoint \
     -d "grant_type=client_credentials" \
-    -d "client_id=Qi757PrbaGjyVY8fzCCj4_MaLP8a" \
+    -d "client_id=s4k1VTdeVsIPwDwRTOKsDSEBV5Ua" \
     -d "client_secret=P5e2xxHFQTf6f72cHsFsd8u_8b5iD9XwiZYWxYF76jAa" \
     -d "scope=courses:read-approved courses:publish")
 # Extract access token from response

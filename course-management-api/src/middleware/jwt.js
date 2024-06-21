@@ -57,12 +57,12 @@ export const determineScopes = (req, res, next) => {
 
 export const jwtCheck = expressjwt({
     secret: jwksRsa.expressJwtSecret({
-        cache: true,
+        cache: false,
         rateLimit: true,
         jwksRequestsPerMinute: 5,
         jwksUri: 'https://localhost:9443/oauth2/jwks'
     }),
-    audience: 'Qi757PrbaGjyVY8fzCCj4_MaLP8a',
+    audience: 's4k1VTdeVsIPwDwRTOKsDSEBV5Ua',
     issuer: 'https://localhost:9443/oauth2/token',
     algorithms: ['RS256']
 });

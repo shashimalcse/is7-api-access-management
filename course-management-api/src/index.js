@@ -1,6 +1,6 @@
 import express from 'express';
+const cors = require('cors');
 import { jwtCheck, determineScopes, checkScope } from './middleware/jwt.js';
-import e from 'express';
 
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 
@@ -32,14 +32,15 @@ app.get('/api/courses', determineScopes, checkScope, async (req, res) => {
     } else {
         courses = coursesDb.filter(course => course.published === true && course.pending === false);
     }
-    // courses = courses.map(course => {
-    //     return {
-    //         id: course.id,
-    //         name: course.name,
-    //         details: course.details,
-    //         started_date: course.started_date
-    //     };
-    // });
+    courses = courses.map(course => {
+        return {
+            id: course.id,
+            name: course.name,
+            details: course.details,
+            started_date: course.started_date
+        };
+    });
+    console.log(courses);
     res.json(courses);
 });
 
@@ -91,7 +92,7 @@ app.get('/api/courses/:courseId', determineScopes, checkScope, async (req, res) 
 app.put('/api/courses/:courseId', determineScopes, checkScope, async (req, res) => {
     const courseId = parseInt(req.params.courseId);
     const course = coursesDb.find(c => c.id === courseId);
-    if (!course ||  course.pending) {
+    if (!course || course.pending) {
         res.status(404).send('Course not found');
     }
     const updateCourse = req.body;
